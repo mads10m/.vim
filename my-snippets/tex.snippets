@@ -1,0 +1,55 @@
+###########################
+# Sections and chapters   #
+###########################
+
+snippet part "\part{}" b
+\part{$1}
+$0
+endsnippet
+
+snippet sec "\section{}" b
+\section{$1}
+$0
+endsnippet
+
+snippet ssec "\subsection{}" b
+\subsection{$1}
+$0
+endsnippet
+
+snippet sssec "\subsubsection{}" b
+\subsubsection{$1}
+$0
+endsnippet
+
+snippet *sec "\section*{}" b
+\section*{$1}
+$0
+endsnippet
+
+snippet *ssec "\subsection*{}" b
+\subsection*{$1}
+$0
+endsnippet
+
+snippet *sssec "\subsubsection*{}" b
+\subsubsection*{$1}
+$0
+endsnippet
+
+# Rename
+snippet "b(egin)?" "begin{} / end{}" br
+\begin{${1:something}}
+	${0:${VISUAL}}
+\end{$1}
+endsnippet
+
+################################
+# Line breaks and blank spaces #
+################################
+
+snippet nl "\newline"
+\newline
+$0
+endsnippet
+
