@@ -66,7 +66,7 @@ snippet it "\textit{}"
 endsnippet
 
 ################################
-# Math                         #
+# Math						   #
 ################################
 
 snippet $ "$ ... $"
@@ -75,4 +75,31 @@ endsnippet
 
 snippet $$ "$$ ... $$" b
 $$ $1 $$$0
+endsnippet
+
+snippet eq "\begin{equation} ... \end{equation}" b
+\begin{equation}
+	$1
+\end{equation}
+$0
+endsnippet
+
+snippet al "\begin{align} ... \end{align}" b
+\begin{align}
+	$1
+\end{align}
+$0
+endsnippet
+
+################################
+# somthing                     #
+################################
+
+snippet fig "\begin{figure}[] ... \end{figure}" b
+\begin{figure}[${1:H}]
+	${2:\centering}
+	$4
+	\caption{${3:caption text}}
+\end{figure}
+$0
 endsnippet
