@@ -1,0 +1,62 @@
+<div id="overlayDiv" class="{{backgroundToggle}}"></div>
+<ion-content>
+  <ion-scroll scrollY="true">
+    <nav-bar> </nav-bar>
+    <ion-grid class="page-title">
+      <ion-row>
+        <ion-col>
+          <h1>{{title}}</h1>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+    <div class="product element" *ngFor="let product of cart.productsInCart">
+      <hr>
+      <div class="productContainerDiv">
+        <img src="{{product[0].isDaily ? 'assets/img/daily.jpg' : linkPrefix+imagePathTo135x135(product[0].image)}}"/>
+        <div class="productInfoDiv">
+          <p class="productName">{{product[0].name}}</p>
+            <div class="dagensRetAmountPicker">
+              <div>
+                <ion-icon class="removeOne" name="ios-remove" (tap)="removeOne(product)"></ion-icon>
+                <p>{{product[1]}} stk.</p>
+                <ion-icon class="addOne" name="ios-add" (tap)="addOne(product)"></ion-icon>
+              </div>
+            </div>
+            <button class="deleteButton" ion-button (tap)="removeCompletely(product)">
+              Slet
+            </button>
+            <p class="productPrice">{{product[0].price * product[1]}} kr.</p>
+          </div>
+        </div>
+    </div>
+    <p id="nothingInCartMessage" *ngIf="cart.productsInCart.length==0">Din kurv er tom. Gå til sortiment for at se udvalget af produkter.</p>
+
+    <hr>
+    <div id="bottomDiv">
+      <div id="totalCostDiv">
+        <h1 id="totalCostText">Total</h1>
+        <h1 id="totalCostPrice">{{cart.totalCost}} kr.</h1>
+      </div>
+
+	  <div *ngIf="sub == true">
+	    <h6>Afhentningssted</h6>
+		<div class="subLocationList">
+	      <ion-item no-lines>
+	      	<ion-select color="green" placeholder="Vælg" [(ngModel)]="selectedSub">
+				<ion-option *ngFor="let sub of subList; let i = index"> {{subList[i].location}} </ion-option>
+	      	</ion-select>
+	      </ion-item>
+		</div>
+	    <!--<select class="form-control">
+	      <option disabled selected hidden>Vælg </option>
+		  <option *ngFor="let sub of subList; let i = index"> {{subList[i].location}} </option>
+		</select>-->
+	  </div>
+     <button ion-button id="payButton" (tap)="pay()" [disabled]="cart.productsInCart.length==0 || (selectedSub == false && sub == true)">
+        Betal med MobilePay
+      </button>
+	  <p id="bottomNote" *ngIf="sub == false">OBS! Afhentes i restauranten den {{todayString}} mellem kl. {{pickupStart}} og kl. {{pickupEnd}}</p>
+	  <p id="bottomNote" *ngIf="sub == true">OBS! Afhentes mellem kl. {{pickupStart}} og kl. {{pickupEnd}}</p>
+    </div>
+  </ion-scroll>
+</ion-content>

@@ -1,0 +1,10 @@
+\documentclass[12pt]{article}
+\begin{document}
+
+\section{Regular expressions}
+
+\subsection{Meta sequences}
+$.$ Matches any character other than newline
+df
+
+\end{document}

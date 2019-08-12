@@ -1,0 +1,10 @@
+#import datetime
+import time
+
+#egin = datetime.datetime(2019, 8, 12, 8, 15)
+
+while True:
+#   now = datetime.datetime.now()
+#   print(begin - now, end="")
+    print(time.now())
+    time.sleep(1)

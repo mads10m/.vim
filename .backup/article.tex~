@@ -1,0 +1,16 @@
+\documentclass[a4paper, 12pt]{article}
+
+\usepackage{preamble}
+
+% Header
+\fancyhead[L]{}
+\fancyhead[C]{}
+\fancyhead[R]{}
+% Footer
+\fancyfoot[L]{}
+\fancyfoot[C]{}
+\fancyfoot[R]{side~\thepage~af~\pageref{LastPage}}
+
+\begin{document}
+test
+\end{document}

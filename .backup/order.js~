@@ -1,0 +1,567 @@
+'use strict';
+
+const _ = require('lodash');
+const fs = require('fs');
+const async = require('async');
+const request = require('superagent');
+const pwdGenerator = require('generate-password');
+const excel = require('node-excel-export');
+
+const Order = require('../models/Order');
+const User = require('../models/User');
+const Location = require('../models/Location');
+const Product = require('../models/Product');
+const MailHandler = require('../controllers/mailHandler.js');
+
+const pem = require('pem');
+const sha1 = require('sha1');
+const jws = require('jws');
+
+const merchantId = "APPDK7528156001";
+const primaryKey = "6a2d970aa537473bb699c7b9ed676d35";
+let privateKey = "";
+
+fs.readFile(__dirname + "/../merchant.pfx", (err, file) => {
+  pem.readPkcs12(file, { p12Password: "q1w2Q!W@" }, (err, cert) => {
+    if (err) console.log(err.message);
+    privateKey = cert.key;
+  });
+});
+
+function createSignature(payload, cb) {
+  /*console.log("PVK: ");
+  console.log(privateKey);*/
+  // ensure utf8
+  payload = Buffer.from(payload).toString();
+  // sha1
+  payload = Buffer.from(sha1(payload), "hex");
+  // base64
+  payload = Buffer.from(payload).toString('base64');
+
+  // and finally, the jws (not jwt!)
+  return jws.createSign({
+    header: { alg: "RS256" },
+    privateKey: privateKey,
+    payload: payload
+  }).on('done', cb);
+}
+
+const headerStyle = {
+  fill: {
+    fgColor: {
+      rgb: 'FF4E801F'
+    }
+  },
+  font: {
+    color: {
+      rgb: 'FFFFFFFF'
+    },
+    bold: true,
+  }
+};
+const cellStyle = (value, row) => {
+  return row.name === "I alt" ? {
+    fill: {
+      fgColor: {
+        rgb: 'FF95989A'
+      }
+    },
+    font: {
+      color: {
+        rgb: 'FFFFFFFF'
+      }
+    }
+  } : {};
+};
+
+const makeSheet = (filename, data) => {
+  return {
+    name: filename,
+    specification: {
+      name: {
+        displayName: 'Produkt',
+        headerStyle,
+        cellStyle,
+        width: 220
+      },
+      price: {
+        displayName: 'Pris',
+        headerStyle,
+        cellStyle,
+        width: 80
+      },
+      amount: {
+        displayName: 'Antal',
+        headerStyle,
+        cellStyle,
+        width: 80
+      },
+      total: {
+        displayName: 'Sum',
+        headerStyle,
+        cellStyle,
+        width: 100
+      }
+    },
+    data
+  }
+};
+
+const validateOrder = (url, order, res, callback) => {
+  createSignature(url, (signature) => {
+    request
+      .get(url)
+      .set("Ocp-Apim-Subscription-Key", primaryKey)
+      .set("AuthenticationSignature", signature)
+      .end((err, data) => {
+        // Refund while testing
+        /*createSignature(url + '{}', (signature)=>{
+          request
+            .put(url)
+            .set("Ocp-Apim-Subscription-Key", primaryKey)
+            .set("AuthenticationSignature", signature)
+            .send('{}')
+            .end((err, data) => {
+              console.log("--------------------------");
+              console.log("------ REFUND INFO: ------");
+              console.log("--------------------------");
+              console.log(err);
+              console.log("\n\n -- Data -- \n");
+              if(!err) console.log(JSON.parse(data.text));
+              else console.log(data.text);
+              console.log("--------------------------");
+            });
+        });*/
+
+        if (err) {
+          if (err.status === 404) {
+            //callback(404);
+            //return 404;
+          } else {
+            //callback(500);
+            //return 500;
+          }
+        }
+
+        data = JSON.parse(data.text);
+
+        /*console.log(data.TransactionId !== o.transactionId);
+        if (data.TransactionId !== o.transactionId)
+          return res.status(500).send("Ukendt fejl");*/
+
+        if (data.LatestPaymentStatus !== "Captured")
+          //return res.status(402).send("Betalingen er ikke gået igennem");
+
+        if (data.OriginalAmount !== order.totalCost)
+          //return res.status(402).send("Det overførte beløb er ikke korrekt");
+
+        if (order.pickupDate !== null && order.pickupDate !== undefined)
+          //return res.status(400).send("Ordren er allerede betalt");
+        // If it has, set pickupDate in the order
+        order.pickupDate = new Date();
+        //order.pickupDate.setHours(order.pickupDate.getHours() - new Date().getTimezoneOffset() / 60); // Timezone-stuff
+        order.save();
+
+        //Order went through successfully
+        MailHandler.sendOrderToChef(order);
+        MailHandler.sendOrderToUser(order);
+        //Remove sold products from supply
+        async.eachSeries(_.uniqBy(order.products, _.toString), (pid, cb) => {
+          Product.update({ "_id":  pid}, { "$inc": { "amount": -_.sumBy(order.products, p => p.toString() === pid.toString() ? 1 : 0) } }
+          ).then(products => {
+            console.log(products);
+            cb();
+          }).catch(err => {
+            console.log("Could not update product amounts" + err);
+            cb(err);
+          });
+        }, (err) => {
+          if(err) {
+            callback(500);
+            return res.status(500).send(err);
+          }
+          callback(204);
+          return 204;
+        });
+      });
+  });
+};
+
+module.exports = {
+  validateAndGenerateId: (req, res, next) => {
+    const user = res.locals.user;
+    if (!user) return res.status(400).send("Log venligst ind");
+    if (!req.body.products || req.body.products.length <= 0) return res.status(400).send("Kurven er tom");
+    let location;
+    Location.findById(user.location, (err, data) => {
+      if (err) return res.status(500).send(err);
+
+      location = data;
+      req.body.totalCost = 0;
+
+      async.each(req.body.products, (p, cb) => {
+        Product.findById(p._id).then(_p => {
+          if (!_.some(location.products, _p._id))
+            cb(404);
+          else {
+            req.body.totalCost += _p.price;
+            if (_p.isDaily) {
+              let today = new Date();
+              today.setHours(today.getHours() - new Date().getTimezoneOffset() / 60);
+              let deadline = data.pickupStart.split(':').map(d => parseInt(d));
+              if (deadline[1] < 10) {
+                deadline[0]--;
+                deadline[1] += 50;
+              } else {
+                deadline[1] -= 10;
+              }
+              if (today.getHours() > parseInt(deadline[0]) && today.getMinutes() > parseInt(deadline[1])) {
+                return res.status(403).send("Lokationen har lukket for bestilling af dagens ret!");
+              }
+            }
+
+            cb();
+          }
+        }).catch(err => {
+          cb(404);
+        });
+      }, (err) => {
+        if (err)
+          if (err === 404)
+            return res.status(400).send("Et eller flere af de valgte produkter findes ikke hos din lokation");
+          else return res.status(500).send("Ukendt fejl");
+        else {
+          async.each(_.uniq(req.body.products), (pid, cb) => {
+            pid = pid._id;
+            Product.findById(pid).then(p => {
+              if (p.amount - _.sumBy(req.body.products, s => s._id === pid ? 1 : 0) < 0)
+                cb(507);
+              else
+                cb();
+            }).catch(err => {
+              cb(404);
+            });
+          }, (err) => {
+            if (err)
+              if (err === 404)
+                return res.status(400).send("Et eller flere af de valgte produkter findes ikke");
+              else if (err === 507)
+                return res.status(400).send("Lokationen er løbet tør for et eller flere af de valgte produkter");
+              else return res.status(500).send("Ukendt fejl");
+            else {
+              // Generate a random Id (between 30 and 50 chars in length)
+              req.body.transactionId = pwdGenerator.generate({ length: 30 + Math.floor(Math.random() * 20), numbers: true });
+              next();
+            }
+          });
+        }
+      }); //async
+
+    }); //location
+
+  },
+
+  create: (req, res, next) => {
+    // Check if valid info is given (ID, User, Products) and create new order with given info
+    const o = _.pick(req.body, ['transactionId', 'products', 'totalCost', 'location']);
+    o.user = res.locals.user._id;
+    new Order(o).save((err, data) => {
+      if (err)
+        return res.status(400).send(err);
+      return res.status(201).send({ transactionId: data.transactionId, totalCost: req.body.totalCost });
+    });
+  },
+
+  validateForUser: (req, res, next) => {
+    // Find all unverified orders from the user
+    Order.find({ pickupDate: null, user: res.locals.user._id }, (err, orders) => {
+      // Go async through all orders and try to validate them
+      async.each(orders, (o, cb) => {
+        const url = "https://api.mobeco.dk/appswitch/api/v1/merchants/" + merchantId + "/orders/" + o.transactionId;
+        validateOrder(url, o, res, (errCode) => {
+          if (!errCode) {
+            cb();
+          }
+          switch (errCode) {
+            case 204:
+            case 404:
+              return cb();
+            case 500:
+            default:
+              return res.status(500).send("Ukendt fejl")
+          }
+        });
+      }, (result) => {
+        console.log(result);
+        return res.status(204).send({});
+      });
+
+    });
+  },
+
+  /* Example values:
+  "LatestPaymentStatus": "Captured",
+  "TransactionId": "61872634691623746",
+  "OriginalAmount": 123.45
+  */
+  validateSingle: (req, res, next) => {
+    // This is after an order has been created, so check if it exists (without pickup date)
+    Order.findOne({ transactionId: req.params.transactionId }).then(o => {
+      // Send request with ID to MobilePay, and check if the payment has been made.
+      const url = "https://api.mobeco.dk/appswitch/api/v1/merchants/" + merchantId + "/orders/" + o.transactionId;
+      validateOrder(url, o, res, (errCode) => {
+        switch (errCode) {
+          case 204:
+            return res.status(204).send({});
+          case 404:
+            return res.status(404).send("Betalingen kunne ikke findes hos MobilePay");
+          case 500:
+          default:
+            return res.status(500).send("Ukendt fejl")
+        }
+      });
+    }).catch(err => {
+      console.log(err);
+      return res.status(400).send("Invalid transactionId");
+    });
+  },
+
+  list: (req, res, next) => {
+    let realDate;
+    if(res.locals.sendToMail && req.params.end) {
+      realDate = new Date(parseInt(req.params.end));
+      realDate.setDate(realDate.getDate()+1);
+    }
+
+    Order.find({ pickupDate: { $gte: new Date(parseInt(req.params.start)), $lte: ( realDate || new Date(parseInt(req.params.end)) ) } }, (err, orders) => {
+      if (err) return res.status(500).send("Ukendt fejl");
+      orders = _.flattenDeep(orders.map(o => o.products));
+      orders = _.uniqBy(orders, _.toString).map(p => [p, _.sumBy(orders, s => s.toString() === p.toString() ? 1 : 0)]);
+      async.map(_.uniqBy(orders, _.toString), (order, cb) => {
+        Product.findById(order[0], (err, product) => {
+          if (err) return cb(err);
+          order[0] = _.pick(product, ['_id', 'name', 'price']);
+          cb();
+        });
+      }, (err) => {
+        if (err) return res.status(500).send("Ukendt fejl");
+        if (res.locals.sendToMail) {
+          res.locals.orders = orders;
+          next();
+        } else
+          res.status(200).send(orders);
+      });
+    });
+  },
+
+  listLocation: (req, res, next, locId = null) => {
+    let today = new Date();
+    today.setHours(-new Date().getTimezoneOffset() / 60, 0, 0, 0);
+    let realDate;
+    if(res.locals.sendToMail && req.params.end) {
+      realDate = new Date(parseInt(req.params.end));
+      realDate.setDate(realDate.getDate()+1);
+    }
+
+    let pickupDate = req.params.start ? { $gte: new Date(parseInt(req.params.start)), $lte: ( realDate || new Date(parseInt(req.params.end)) ) } : { $gte: today };
+    let allOrders = [];
+    Location.findById(locId || req.params.locationId, (err, l) => {
+      if (!l) return res.status(404).send({ err: "Kunne ikke finde lokationen" });
+      res.locals.locationName = l.name + "_";
+      User.find({ location: locId || req.params.locationId }, (err, users) => {
+        if (err) return res.status(500).send(err);
+        async.each(users, (user, cb) => {
+          Order.find({ user: user._id, pickupDate }, (err, orders) => {
+            if (err) return cb(err);
+            orders = _.flattenDeep(orders.map(o => o.products));
+            allOrders = allOrders.concat(orders);
+            cb();
+          });
+        }, (err) => {
+          if (err) return res.status(500).send("Ukendt fejl");
+          allOrders = _.uniqBy(allOrders, _.toString).map(p => [p, _.sumBy(allOrders, s => s.toString() === p.toString() ? 1 : 0)]);
+          async.map(_.uniqBy(allOrders, _.toString), (order, cb) => {
+            Product.findById(order[0], (err, product) => {
+              if (err) return cb(err);
+              order[0] = _.pick(product, req.params.start ? ['_id', 'name', 'price'] : ['_id', 'name']);
+              cb();
+            });
+          }, (err) => {
+            if (err) return res.status(500).send("Ukendt fejl");
+            if (res.locals.sendToMail) {
+              res.locals.orders = allOrders;
+              if (locId)
+                next(allOrders);
+              else
+                next();
+            } else
+              res.status(200).send(allOrders);
+          });
+        });
+      });
+    });
+  },
+
+  listUser: (req, res) => {
+    let today = new Date();
+    today.setHours(-new Date().getTimezoneOffset() / 60, 0, 0, 0);
+    let totalCost = 0;
+    Order.find({ pickupDate: { $gte: today }, user: req.params.userId }, (err, orders) => {
+      if (err) return res.status(500).send(err);
+      let productsInOrders = [];
+      async.each(orders, (o, cb) => {
+        async.each(o.products, (pid, _cb) => {
+          Product.findById(pid, (err, product) => {
+            if (!err) {
+              totalCost += product.price;
+              product = _.pick(product, ['name', 'isDaily', 'price']);
+              productsInOrders.push(product);
+            }
+            _cb(err);
+          });
+        }, (err) => {
+          cb(err);
+        });
+      }, (err) => {
+        if (err) return res.status(500).send("Ukendt fejl");
+        productsInOrders = _.uniqBy(productsInOrders, p => [p.name, p.price].join()).map(p =>
+          [p, _.sumBy(productsInOrders, s => s.name === p.name && s.price === p.price ? 1 : 0)]
+        );
+        res.status(200).send([productsInOrders, totalCost]);
+      });
+    });
+  },
+
+  sendStatisticsToMail: (req, res) => {
+    const mapData = d => {
+      d[0].amount = d[1];
+      d[0].total = d[0].price * d[1];
+      return _.omit(d[0], '_id');
+    };
+    let data = _.map(res.locals.orders, mapData);
+    data.push({
+      name: 'I alt',
+      price: '',
+      amount: _.sumBy(data, 'amount'),
+      total: _.sumBy(data, 'total')
+    });
+
+    let today = new Date();
+    today.setHours(today.getHours() - new Date().getTimezoneOffset() / 60);
+    const filename = name => 'statistik_' + name + today.toISOString().substr(0, 19).replace('T', '_').replace(':', '').replace(':', '');
+
+    const originalFilename =
+      filename(res.locals.locationName || "samlet_")
+      + "_" + new Date(parseInt(req.params.start)).toISOString().substr(0, 10)
+      + (req.params.start !== req.params.end ? "_" + new Date(parseInt(req.params.end)).toISOString().substr(0, 10) : "");
+
+    const sheets = [];
+
+    const finishExcel = () => {
+      if (!res.locals.locationName) {
+        Location.find({}, (err, locations) => {
+          async.each(locations, (l, cb) => {
+            module.exports.listLocation(req, res, (orders = null) => {
+              const locationData = _.map(orders, mapData);
+              locationData.push({
+                name: 'I alt',
+                price: '',
+                amount: _.sumBy(locationData, 'amount'),
+                total: _.sumBy(locationData, 'total')
+              });
+              sheets.push(makeSheet(filename(l.name + "_"), locationData));
+              cb();
+            }, l._id);
+          }, err => {
+            if (err) return res.status(500).send({ err: "Ukendt fejl" });
+
+            try {
+              const report = excel.buildExport(sheets);
+
+              MailHandler.sendStatisticsMail(res.locals.user.email, originalFilename + '.xlsx', report, success => {
+                if (success)
+                  res.status(200).send();
+                else
+                  res.status(500).send({ err: "Ukendt fejl i mail-modul" });
+              });
+            }
+            catch (e) {
+              console.log(e);
+              res.status(500).send({ err: "Ukendt fejl i Excel-modul" });
+            }
+          });
+        });
+      } else {
+        try {
+          const report = excel.buildExport(sheets);
+
+          MailHandler.sendStatisticsMail(res.locals.user.email, originalFilename + '.xlsx', report, success => {
+            if (success)
+              res.status(200).send();
+            else
+              res.status(500).send({ err: "Ukendt fejl i mail-modul" });
+          }, res.locals.locationName.slice(0, res.locals.locationName.length - 1));
+        }
+        catch (e) {
+          console.log(e);
+          res.status(500).send({ err: "Ukendt fejl i Excel-modul" });
+        }
+      }
+    };
+    if(req.params.posteringer) {
+      let transactionData = [];
+      Order.find({pickupDate: {$ne: null}}, (err, orders) => {
+        async.each(orders, (o, cb) => {
+          User.findById(o.user, (err, u) => {
+            Location.findById(u.location, (err, l) => {
+              o = o.toJSON();
+              o.location = l.name;
+              transactionData.push(o);
+              cb(err);
+            });
+          });
+        }, (err) => {
+          if (err) return res.status(500).send("Ukendt fejl i posteringer");
+
+          sheets.push({
+            name: "Posteringer",
+            specification: {
+              pickupDate: {
+                displayName: 'Timestamp',
+                headerStyle,
+                cellStyle,
+                width: 100
+              },
+              location: {
+                displayName: 'Lokation',
+                headerStyle,
+                cellStyle,
+                width: 100
+              },
+              transactionId: {
+                displayName: 'Ordre ID',
+                headerStyle,
+                cellStyle,
+                width: 240
+              },
+              totalCost: {
+                displayName: 'Beløb',
+                headerStyle,
+                cellStyle,
+                width: 80
+              }
+            },
+            data: transactionData
+          });
+
+          sheets.push(makeSheet(filename(res.locals.locationName || "samlet_"), data));
+          finishExcel();
+        });
+      });
+    } else {
+      sheets.push(makeSheet(filename(res.locals.locationName || "samlet_"), data));
+      finishExcel();
+    }
+  }
+
+};

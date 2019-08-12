@@ -1,0 +1,52 @@
+import { Component } from '@angular/core';
+import { Events, IonicPage, NavController, NavParams, ViewController} from 'ionic-angular';
+import {BasePage} from "../BasePage";
+import {LocationsProvider} from "../../providers/locations/locations";
+import {AuthProvider} from "../../providers/auth/auth";
+
+@IonicPage({
+  defaultHistory: [
+    "DashboardPage",
+    "LocationsPage"
+  ],
+  segment: 'location/:id'
+})
+@Component({
+  selector: 'page-show-location',
+  templateUrl: 'show-location.html',
+})
+export class ShowLocationPage extends BasePage {
+  navBarEnabled = true;
+  title = "Detaljer";
+  currentLocation = {_id: "", name: "", address: "", minProducts: "", chef: ""};
+  chef = { chefName: "", email: ""};
+  constructor(public navCtrl: NavController, public navParams: NavParams,
+              public locations: LocationsProvider, public events: Events,
+              public viewCtrl: ViewController, public auth: AuthProvider) {
+    super();
+    console.log("test")
+    locations.show(navParams.get('id')).then((res:any) => {
+      this.currentLocation = res;
+      auth.getUserInfo(this.currentLocation.chef).then( (res:any) => {
+        this.chef = res;
+      });
+    });
+  }
+
+  ionViewDidLoad() {
+    console.log('ionViewDidLoad ShowLocationPage');
+  }
+
+  goBack() {
+    this.navCtrl.pop();
+  }
+  ionViewWillEnter() {
+	console.log("this");
+    this.locations.show(this.navParams.get('id')).then((res:any) => {
+	  this.currentLocation = res;
+	  this.auth.getUserInfo(this.currentLocation.chef).then( (res:any) => {
+	    this.chef = res;
+	  });
+    });
+  }
+}

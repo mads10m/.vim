@@ -1,0 +1,235 @@
+const nodemailer = require('nodemailer');
+const MAIL_ACCOUNT_USERNAME = "APP-no-reply@appetizeplus.dk"; //Mail konto
+const MAIL_ACCOUNT_PASSWORD = "KTkt2019"; //Mail kode
+const MAIL_SERVER_HOSTNAME = "smtp.office365.com"; //Mail host
+const MAIL_SERVER_PORT = 587; //Mail port
+
+const Product = require('../models/Product');
+const Order = require('../models/Order');
+const User = require('../models/User');
+const Location = require('../models/Location');
+
+const Image_Instagram = { filename: "instagram.png", path: "./images/instagram.png", cid: "instagram" };
+const Image_TilfoejVare = { filename: "tilfojvare.png", path: "./images/tilfojvare.png", cid: "tilfojvare" };
+const Image_Logo = { filename: "appetize_logo.png", path: "./images/appetize_logo.png", cid: "appetize_logo" };
+const moment = require('moment');
+
+module.exports = {
+    sendSignUpConfirmationMail: (recipient) => {
+        console.log("Sending signup confirmation email");
+
+        let attachment = [Image_Instagram, Image_Logo, Image_TilfoejVare];
+        let content = "<html><body style=\"margin:0px\"><table style=\"height:100%;width:100%;text-align:center;font-family:Arial, Helvetica, sans-serif\"><tbody><tr><td id=\"topdiv\" style=\"font-size:2.5em;align:center;font-weight:100;background-color:#4E801F;color:#FFFFFF;height:45%;border-bottom:1px solid #444444\"><br><p style=\"\">Tak fordi du har downloadet<br>Appetize+ App’en!</p><img src=\"cid:tilfojvare\" style=\"max-width:550px;width:50%\"></td></tr><tr ><td id=\"center\" style=\"text-align:center;font-weight:100;background-color:#FFFFFF;color:#4E801F;height:45%;\"><br><br><p style=\"margin:auto;font-size:2.5em;font-weight:600\">Takeaway - gjort endnu nemmere</p><br><br><p style=\"margin:auto;width:70%;font-size:2.5em;\">Nu kan du nemt bestille takeaway fra din telefon så du uden problemer kan få lækker mad med hjem efter en lang arbejdsdag.<br><br><br>Det er god madstil!<br><br></p>" +
+            "<img alt=\"logo\" src=\"cid:appetize_logo\" style=\"width:120px\">" +
+            "</td></tr><tr><td id=\"botdiv\" style=\"background-color:#4E801F;color:#FFFFFF;\"><a style=\"text-decoration:none\" href=\"https://www.instagram.com/APPETIZEplus/\"><p style=\"color:#FFFFFF;font-size:1.5em;align:center;font-weight:100;font-style:italic;padding:25px;\">Følg med på Instagram <img src=\"cid:instagram\" style=\"vertical-align:middle;width:1em\"></p></a></td></tr></tbody></table></body></html>";
+
+        //Send mail
+        sendMail(recipient,
+            "Du er nu oprettet i Appetize+",
+            content,
+            attachment
+        );
+    },
+    sendOrderToUser: (order) => {
+      console.log("Sending order confirmation email");
+
+      let attachment = [Image_Instagram, Image_Logo];
+
+      getUniqueProductsAndAmounts(order, function (products) {
+        User.findById(order.user).then(user => {
+          Location.findById(user.location).then(location => {
+            let recipient = user.email;
+
+            let pickUpTime = location.pickupStart;
+            let date = moment().format('DD/MM/YYYY/HH:mm');
+
+            let orderString = "";
+
+            let recipientName;
+            if(user.firstName && user.lastName)
+              recipientName = user.firstName + " " + user.lastName;
+            else
+              recipientName = user.email;
+
+            products.forEach(function (product) {
+              let productThumbnail = product.product.image.replace("images/", "images/500x500_");
+              orderString += "<tr style=\"border-bottom:2px solid #ccc;\"><td style=\"width:18%;padding:15px;\">" +
+                "<img style=\"width:100%\" src=\"http://178.62.215.40/" + productThumbnail + "\" />" +
+                "</td><td style=\"font-size:2em;font-weight:lighter;padding:20px;text-align:left;vertical-align:top \">" +
+                product.amount + " stk. " + product.product.name + "</td><td style=\"font-size:2.5em;vertical-align:bottom;text-align:right;padding:15px;\">" +
+                product.product.price * product.amount + "kr.</td></tr>";
+            });
+			  let content = "<html><body style=\"margin:0px\"><table style=\"width:100%;font-family:Arial, Helvetica, sans-serif\"><tbody><tr><td id=\"topdiv\" style=\"background-color:#4E801F;color:#FFFFFF;border-bottom:1px solid #444444;height:10px;\"><p style=\"font-weight:600;font-size:3em;text-align:center;padding:45px;\"> Tak for din bestilling hos Appetize+</p></td></tr><center><tr><td id=\"center\" style=\"font-weight:100;background-color:#FFFFFF;color:#4E801F;text-align:center\"></center><div style=\"display: inline-block; text-align: left;width:51em\"><p style=\"font-size:1.8em;font-weight:300;line-height:1.2em;\">" +
+			  "Vi håber at vi har gjort din hverdag lidt lettere og glæder os til at betjene dig en anden gang." +
+			  "For varer der ikke kan afhentes i dag, kan du se yderligere detaljer i denne mail.</p><p style=\"color:#000;font-size:1.5em;\">"
+			  if (order.location != false && order.location != undefined && order.location != null) {
+                content += "Bestillingen kan afhentes kl. " + pickUpTime + " på " + order.location;
+			  } else {
+                content += "Bestillingen kan afhentes kl. " + pickUpTime + " i restauranten";
+			  } 
+              content += "</p></div>" +
+              "<br><br><br><br><center><table style=\"width:57%;border-collapse:collapse;\"><tbody>" +
+              orderString +
+              "<tr style=\"font-size:2.5em;border-bottom:2px solid #ccc;\"><td style=\"color:#4E801F;padding:15px;\">" +
+              "Total" +
+              "</td><td></td><td style=\"text-align:right;vertical-align:bottom;padding:15px;\">" +
+              order.totalCost +
+              "</td></tr></tbody></table></center><br><br><br><div style=\"color:#000;width=100%;text-align:center;font-size:2.5em;\">" +
+			  "Dato: " + date + "<br>" +
+              "Bestillings reference: " + order._id +
+              "</p><br>" +
+              "<img alt=\"logo\" src=\"cid:appetize_logo\" style=\"width:180px\">" +
+              "<br><br></div></td></tr></center><tr><td style=\"background-color:#4E801F;color:#FFFFFF;height:10%;\"><a style=\"text-decoration:none\" href=\"https://www.instagram.com/APPETIZEplus/\"><p style=\"color:#FFFFFF;font-size:1.5em;align:center;font-weight:100;font-style:italic;padding:25px;text-align:center\">" +
+              "Følg med på Instagram  " +
+              "<img src=\"cid:instagram\" style=\"vertical-align:middle;width:1.5em\"></p></a></td></tr></tbody></table></body></html>";
+			
+            //Send mail
+            sendMail(
+              recipient,
+              "Tak for din bestilling",
+              content,
+              attachment
+            );
+          });
+        });
+      });
+    },
+    sendStatisticsMail(recipent, _filename, _filecontent, cb = (success) => { }, locationName = null) {
+        console.log("Sending statistics email");
+
+        let content = "<html><body style=\"margin:0px\"><table style=\"width:100%;font-family:Arial, Helvetica, sans-serif\"><tbody><tr><td style=\"background-color:#4E801F;color:#FFFFFF;border-bottom:1px solid #444444;height:10px;\"><p style=\"font-weight:600;font-size:3em;text-align:center;padding:45px;\">Statistikmail</p></td></tr><tr><td style=\"color:#4E801F;solid #444444;height:10px;\"><p style=\"font-weight:600;font-size:3em;text-align:center;padding:45px;\">" +
+            (locationName ?
+                "Statistik for " + locationName :
+                "Samlet statistik")
+            + " er vedhæftet i excelformat i denne mail" +
+            "</p></td></tr></tbody></table></body></html>";
+
+        //Send mail
+        return sendMail(recipent,
+            "Statistikmail",
+            content,
+            {
+                filename: _filename,
+                content: _filecontent
+            }, cb);
+        //Hent køkkenchef detailjer og send relevant statistik til ham
+    },
+    sendResetPasswordMail(recipient, newPassword) {
+        console.log("Sending reset password email");
+
+        let attachment = [Image_Instagram, Image_Logo];
+
+        let content = "<html><body style=\"margin:0px\"><table style=\"height:100%;width:100%;text-align:center;font-family:Arial, Helvetica, sans-serif\"><tbody><tr><td id=\"topdiv\" style=\"font-size:1.5em;align:center;vertical-align:middle;font-weight:100;background-color:#4E801F;color:#FFFFFF;height:10%;padding:25px;\">Nyt kodeord</td></tr><tr ><td id=\"center\" style=\"text-align:center;font-weight:100;background-color:#FFFFFF;color:#4E801F;height:45%;\"><br><br><p style=\"margin:auto;font-size:1.5em;font-weight:600\">Du har anmodet om at få tilsendt et nyt kodeord.<br><br>" +
+            "Dit nye kodeord er: " + newPassword +
+            "<br><br>Sørg for at ændre kodeordet når du er logget ind.<br><br></p></td></tr><tr style=\"height:0;\"><td>" +
+            "<img alt=\"appetize+\" src=\"cid:appetize_logo\" style=\"width:120px;\">" +
+            "</td></tr><tr><td id=\"botdiv\" style=\"background-color:#4E801F;color:#FFFFFF;height:10%;\"><a style=\"text-decoration:none\" href=\"https://www.instagram.com/APPETIZEplus/\"><p style=\"color:#FFFFFF;font-size:1.5em;align:center;font-weight:100;font-style:italic;padding:25px;\">Følg med på Instagram <img src=\"cid:instagram\" style=\"vertical-align:middle;width:1em\"></p></a></td></tr></tbody></table></body></html>";
+        //Send mail
+        sendMail(recipient,
+            "Nyt kodeord",
+            content,
+            attachment);
+    },
+    sendOrderToChef: (order, chef = null) => {
+      console.log("Sending order email to chef");
+      //Get all products from order
+      let date = moment().format('DD/MM/YYYY/HH:mm');
+      let content = "";
+
+      getUniqueProductsAndAmounts(order, function (products) {
+        User.findById(order.user).then(user => {
+          Location.findById(user.location).then(location => {
+            User.findById(location.chef).then(chef => {
+              if (!chef)
+                console.error("Could not find chef!");
+              else {
+                let recipientName;
+                if (user.firstName && user.lastName)
+                  recipientName = user.firstName + " " + user.lastName;
+                else
+                  recipientName = "'" + user.email + "'";
+
+				if (order.location != undefined || order.location != null) {
+                  content += "Afhentningssted: <br><ul>" + order.location + "<br></ul>";
+				} 
+                content += recipientName + " har bestilt følgende produkter: <br><ul>";
+                products.forEach(function (product) {
+                  content += product.amount + " stk. " + product.product.name + "<br>";
+                });
+                content += "</ul>Bestillings reference: " + order._id + "<br>" + date;
+                content += `<br>Kundens kontaktinformationer:<br>Email: ${user.email}`;
+                if (user.phone) {
+                  content += `<br>Telefon: ${user.phone}`
+                }
+
+                let recipient = chef.email;
+                //Send mail
+                sendMail(recipient, "Ny ordre", content);
+              }
+            }).catch(err => {
+              console.error("An error occured while sending mail to chef: ", err);
+            });
+          });
+        });
+      });
+    }
+};
+function sendMail(mail_recipient, mail_subject, mail_body, attachment = [], cb = (success) => { }) {
+    // create reusable transporter object using the default SMTP transport
+    let transporter = nodemailer.createTransport({
+        host: MAIL_SERVER_HOSTNAME,
+        port: MAIL_SERVER_PORT,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: MAIL_ACCOUNT_USERNAME,
+            pass: MAIL_ACCOUNT_PASSWORD
+        }, tls: { rejectUnauthorized: false }
+    });
+
+    // setup email data with unicode symbols
+    let mailOptions = {
+        from: '"Appetize+" <' + MAIL_ACCOUNT_USERNAME + '>', // sender address
+        to: mail_recipient, // list of receivers
+        subject: mail_subject, // Subject line
+        html: mail_body,
+        attachments: attachment
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.log(error);
+            cb(false);
+        } else {
+          console.log('Message sent: %s', info.messageId);
+          cb(true);
+        }
+    });
+}
+function getUniqueProductsAndAmounts(order, cb = (uniqueProducts) => { }) {
+  //Get duplicates from order list
+  let duplicatesList = {}
+  order.products.sort();
+  let amount_counter = 1;
+  for (let i = 0; i < order.products.length; i++) {
+    if (i + 1 < order.products.length) {
+      if (order.products[i].toString() === order.products[i + 1].toString())
+        amount_counter++;
+      else {
+        duplicatesList[order.products[i].toString()] = amount_counter;
+        amount_counter = 1;
+      }
+    }
+    else {
+      duplicatesList[order.products[i].toString()] = amount_counter;
+    }
+  }
+
+  let uniqueList = [];
+  Product.find({"_id": {"$in": order.products}}).then(products => {
+    products.forEach(function (product) {
+      let productAmount = duplicatesList[product._id.toString()];
+      uniqueList.push({"amount": productAmount, "product": product});
+    });
+    cb(uniqueList);
+  });
+}

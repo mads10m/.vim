@@ -28,9 +28,9 @@ snippet "tab(\d+)\s(\d+)" "Description" r
 rows = match.group(1)
 columns = match.group(2)
 snip.rv = """\\begin{tabular}{ l c r }
-	1 & 2 & 3 \\\\
-	4 & 5 & 6 \\\\
-	7 & 8 & 9 \\\\
+	1 & 2 & 3 \\\
+	4 & 5 & 6 \\\
+	7 & 8 & 9 \\\
 \end{tabular}"""`
 endsnippet
 

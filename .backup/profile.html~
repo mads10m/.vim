@@ -1,0 +1,50 @@
+<nav-bar></nav-bar>
+<ion-content>
+  <ion-grid class="page-title">
+    <ion-row style="margin-bottom: 16px">
+      <ion-col col-2 (tap)="navCtrl.pop()">
+        <ion-icon name="md-arrow-back" class="back-button-custom"></ion-icon>
+      </ion-col>
+      <ion-col col-8>
+        <h1>{{title}}</h1>
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  <form [formGroup]="profileForm">
+    <ion-list>
+      <ion-item no-lines *ngIf="auth.role!=='admin'">
+        <ion-label stacked>Lokation</ion-label>
+        <ion-select [disabled]="auth.role!=='user'" color="green" formControlName="location">
+          <ion-option *ngFor="let location of locations" [value]="location._id">{{location.name}}</ion-option>
+        </ion-select>
+      </ion-item>
+
+      <ion-item no-lines *ngIf="auth.role==='user'">
+        <ion-label stacked>Fornavn</ion-label>
+		<!--<ion-input formControlName="firstName" placeholder="" required></ion-input>-->
+      </ion-item>
+      <ion-item no-lines *ngIf="auth.role==='user'">
+        <ion-label stacked>Efternavn</ion-label>
+        <ion-input formControlName="lastName" placeholder="" required></ion-input>
+      </ion-item>
+      <ion-item no-lines>
+        <ion-label stacked>Email</ion-label>
+        <ion-input formControlName="email" type="email" required></ion-input>
+      </ion-item>
+      <ion-item no-lines>
+        <ion-label stacked>Adgangskode</ion-label>
+        <ion-input formControlName="password" type="password" placeholder="Minimum 8 tegn" required></ion-input>
+      </ion-item>
+      <ion-item no-lines>
+        <ion-label stacked>Gentag adgangskode</ion-label>
+        <ion-input formControlName="repeatpassword" type="password" placeholder="Minimum 8 tegn" required></ion-input>
+      </ion-item>
+      <ion-item></ion-item>
+    </ion-list>
+    <a id="resetPW" (tap)="resetPassword()">Reset adgangskode</a>
+    <br>
+    <div>
+      <button ion-button color="green" (tap)="updateProfile()">Gem ændringer</button>
+    </div>
+  </form>
+</ion-content>

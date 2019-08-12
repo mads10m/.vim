@@ -1,0 +1,15 @@
+<link rel="stylesheet" href="style.css">
+<div class="card">
+	<div class="container">
+		<div class="front">
+			Hvad hedder
+			<br><br>
+			<img src="GetImage.jpeg">
+			<br><br>
+			Kontekst: Går i min klasse
+		</div>
+		<div class="back">
+			Andreas
+		</div>
+	</div>
+</div>

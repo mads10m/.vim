@@ -1,0 +1,128 @@
+import { Component } from '@angular/core';
+import {  IonicPage, NavController, NavParams, Events, ViewController,
+          AlertController, LoadingController } from 'ionic-angular';
+import { FormBuilder, Validators } from '@angular/forms';
+import { BasePage } from '../BasePage';
+import { LocationsProvider } from "../../providers/locations/locations";
+import {ProductsProvider} from "../../providers/products/products";
+import {AuthProvider} from "../../providers/auth/auth";
+
+@IonicPage({
+  defaultHistory: [
+    "DashboardPage"
+  ],
+  segment: "create/location"
+})
+@Component({
+  selector: 'page-create-location',
+  templateUrl: 'location.html',
+})
+export class CreateLocationPage extends BasePage {
+  navBarEnabled = true;
+  currentStep: number = 1;
+  isEdit = false;
+  productsList;
+  currentLocation = { hasDaily: "true", sub: "false" };
+  productsControlList = [];
+  subLocationList = [ {location: ""} ];
+
+  public locationForm = this.formBuilder.group({
+    name: ["", Validators.required],
+    address: ["", Validators.required],
+    zip: ["", Validators.required],
+    city: ["", Validators.required],
+    minProducts: [1, Validators.required],
+    hasDaily: [true, Validators.required],
+	sub: [true, Validators.required],
+	//subList: [subLocationList, Validators.required]
+  });
+
+  public productsForm = this.formBuilder.group({
+  });
+
+  public chefForm = this.formBuilder.group({
+    chefName: ["", Validators.required],
+    email: ["", Validators.email]
+  });
+
+  formControlName="sub"
+
+  constructor(public navCtrl: NavController, public navParams: NavParams,
+              public loadingCtrl: LoadingController,
+              public viewCtrl: ViewController,
+              public formBuilder: FormBuilder,
+              public alertCtrl: AlertController,
+              public events: Events, private products: ProductsProvider,
+              private locations: LocationsProvider, public auth: AuthProvider) {
+    super();
+  }
+
+  ionViewDidEnter() {
+    this.products.list().then((res:any) => {
+      this.productsList = res;
+    });
+  }
+
+  goBack() {
+    if(this.currentStep === 1) this.navCtrl.pop();
+    else {
+      this.currentStep--;
+      this.updateProductsForm();
+    }
+  }
+  addSub() {
+	  this.subLocationList.push({location: ""});
+  }
+  updateLocation(index) {
+	  this.subLocationList[index].location = ((document.getElementById("id" + index) as HTMLInputElement).value);
+
+  }
+  deleteSub(index) {
+	  this.subLocationList.splice(index, 1);
+  }
+  updateProductsForm() {
+    if(this.productsControlList.length !== this.locationForm.get('minProducts').value) {
+      let products = {};
+      for (let i = 0; i < this.locationForm.get("minProducts").value; i++) {
+        products["product" + i] = ["", Validators.required];
+      }
+      this.productsControlList = Object.keys(products);
+      this.productsForm = this.formBuilder.group(products);
+    }
+	this.locationForm.value.subList = this.subLocationList;
+  }
+
+  submitForm() {
+	  if(this.currentStep < 3 || (this.currentStep < 4 && this.currentLocation.sub == 'true')) {
+      this.currentStep++;
+      this.updateProductsForm()
+
+    } else {
+	  
+		console.log(this.subLocationList);
+		console.log(this.locationForm.value);
+	  this.locationForm.value.subList = this.subLocationList;
+      let details = this.locationForm.value;
+      details.products = (() => {
+        let arr = [];
+        for(let p in this.productsForm.value) {
+          arr.push(this.productsForm.get(p).value);
+        }
+        return arr;
+      })();
+      Object.assign(details, this.chefForm.value);
+      this.locations.create(details).then((res) => {
+        this.showMessage("Succes!", `Lokationen ${this.locationForm.get('name').value} er oprettet!
+          Sørg for at køkkenchefen laver en bruger med den givne mail.`, () => {
+          this.goToPage("DashboardPage");
+        });
+      }, (err) => {
+        console.log(err);
+        if(err.error && err.error.err)
+          this.showError(err.error.err);
+        else
+          this.showError(err);
+      });
+    }
+  }
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="Basic.css">
+	</head>
+	
+	<body>
+		<div class="container">
+			<div class="item">
+				Is Cloud SQL designed for many writes or reads?
+			</div>
+			<div class="item2">
+				writes
+			</div>
+		</div>
+		<!--<div class="container">
+			<div class="item">
+				Cloud SQL is a transaction RDBMS or relational database management system. It is designed for many more WRITES than READS.
+			</div>
+		</div>-->
+		
+	</body>
+</html>

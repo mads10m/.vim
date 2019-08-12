@@ -1,0 +1,182 @@
+<nav-bar></nav-bar>
+
+<ion-content>
+    <ion-grid class="page-title">
+      <ion-row>
+        <ion-col col-2 (tap)="goBack()">
+          <ion-icon name="md-arrow-back" class="back-button-custom"></ion-icon>
+        </ion-col>
+        <ion-col col-8 text-wrap>
+          <h1 *ngIf="currentStep === 1 && !isEdit">Opret Lokation</h1>
+          <h1 *ngIf="currentStep === 1 && isEdit">Rediger Lokation</h1>
+          <h1 *ngIf="currentStep === 2">Opret Produkter</h1>
+          <p *ngIf="currentStep === 2">Tilføj produkter</p>
+          <h1 *ngIf="currentStep === 3">Opret Køkkenchef</h1>
+		  <h1 *ngIf="currentStep === 4 && currentLocation.sub == 'true'">Afhentningssteder</h1>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+    <div class="form-container">
+      <ion-row padding *ngIf="currentStep === 1">
+        <form [formGroup]="locationForm" (ngSubmit)="submitForm()">
+          <div class="form-group">
+            <label for="name">Arbejdsplads</label>
+            <input  formControlName="name"
+                    placeholder="E.g. Codanhus" id="name"
+                    class="form-control" [(ngModel)]="currentLocation.name">
+          </div>
+          <div class="form-group">
+            <label for="address">Vejnavn + nummer</label>
+            <input  formControlName="address"
+                    placeholder="E.g. Gammel Kongevej 60" id="address"
+                    class="form-control" [(ngModel)]="currentLocation.address">
+          </div>
+          <ion-row>
+            <ion-col>
+              <div class="form-group">
+                <label for="zip">Postnummer</label>
+                <input  formControlName="zip" type="number"
+                        placeholder="E.g. 1850" id="zip"
+                        class="form-control" min=1000 max=9999 value="1234" [(ngModel)]="currentLocation.zip">
+              </div>
+            </ion-col>
+            <ion-col>
+              <div class="form-group">
+                <label for="city">By</label>
+                <input  formControlName="city"
+                        placeholder="E.g. Frederiksberg" id="city"
+                        class="form-control" [(ngModel)]="currentLocation.city">
+              </div>
+            </ion-col>
+          </ion-row>
+
+          <div class="form-group" style="margin-bottom: 1.5rem;">
+            <label for="hasDaily">Dagens ret</label>
+            <ion-segment formControlName="hasDaily" id="hasDaily"
+                         mode="ios" color="green"
+                         [(ngModel)]="currentLocation.hasDaily">
+              <ion-segment-button value="true">Ja</ion-segment-button>
+              <ion-segment-button value="false" id="locationDisabledButton">Nej</ion-segment-button>
+            </ion-segment>
+          </div>
+
+          <div class="form-group">
+            <label for="minProducts">Min. antal produkter</label>
+            <input  formControlName="minProducts" type="number"
+                    placeholder="E.g. 3 (stk.)" id="minProducts"
+                    class="form-control" min=0 [(ngModel)]="currentLocation.minProducts">
+          </div>
+
+		  <div class="form-group">
+		    <label for="sub">Flere afhændningsteder</label>
+			<ion-segment formControlName="sub" id="hasDaily"
+                         mode="ios" color="green"
+                         [(ngModel)]="currentLocation.sub">
+              <ion-segment-button value="true">Ja</ion-segment-button>
+              <ion-segment-button value="false" id="locationDisabledButton">Nej</ion-segment-button>
+            </ion-segment>
+		  </div>
+          <div *ngIf="isEdit && currentStep==1" class="form-group">
+            <label for="chefName">Køkkenchefens navn</label>
+            <input  formControlName="chefName"
+                    placeholder="Navn" id="chefName"
+                    class="form-control" [(ngModel)]="chef.chefName">
+
+          </div>
+
+          <div *ngIf="isEdit && currentStep==1" class="form-group">
+            <label for="chefMail">Køkkenchefens mail</label>
+            <input  formControlName="chefMail"
+                    placeholder="Mail" id="chefMail"
+                    class="form-control" [(ngModel)]="chef.email">
+          </div>
+
+          <div *ngIf="isEdit && currentStep==1 && currentLocation.sub =='true'" class="form-group">
+		    <div  *ngFor="let sub of currentLocation.subList; let i = index" class="form-group">
+			  <label for="sub">Test</label>
+			  <div class="input-and-delete">
+			    <input placeholder="Navn" id="id{{i}}" (input)="updateLocation(i)" class="form-control location" value={{currentLocation.subList[i].location}}>
+			    <img src="assets/img/skraldespand_small.png" (tap)="deleteSub(i)"/>
+			  </div>
+		    </div>
+		  </div>
+		  
+		  <button *ngIf="currentLocation.sub =='true'" ion-button block class="add-sub" (tap)="addSub()" type="button">
+		    Tilføj afhentningssted
+		  </button>
+
+          <button *ngIf="!isEdit" ion-button block color="green" class="bottom-button" [disabled]="!locationForm.valid">
+            Næste
+          </button>
+          <button *ngIf="isEdit" ion-button block color="green" class="bottom-button" [disabled]="!locationForm.valid">
+            Gem
+          </button>
+        </form>
+        <button *ngIf="isEdit" ion-button block color="danger" class="bottom-button" (tap)="deleteLocation()" style="margin-top:0;">
+          Slet
+        </button>
+      </ion-row>
+      <ion-row padding *ngIf="currentStep === 2">
+        <form [formGroup]="productsForm" (ngSubmit)="submitForm()">
+          <div *ngFor="let control of productsControlList; let i = index">
+            <label for="product{{i+1}}">Produkt {{i+1}}</label>
+            <div class="form-group select-container">
+              <ion-item no-lines>
+                <ion-select  formControlName="product{{i}}" placeholder="E.g. Syltet Nøddeknas" id="product{{i+1}}">
+                  <ion-option *ngFor="let product of productsList" value="{{product._id}}">{{product.name}}</ion-option>
+                </ion-select>
+              </ion-item>
+            </div>
+          </div>
+          <button ion-button block color="green" class="bottom-button"
+                  [disabled]="!productsForm.valid || !locationForm.valid">
+            Næste
+          </button>
+        </form>
+        <button ion-button outline block color="green" (tap)="openPage('CreateProductPage')">Opret nyt produkt</button>
+      </ion-row>
+      <ion-row padding *ngIf="currentStep === 3">
+        <form [formGroup]="chefForm" (ngSubmit)="submitForm()">
+          <div class="form-group">
+            <label for="chef-name">Køkkenchefens navn</label>
+            <input  formControlName="chefName"
+                    placeholder="Navn" id="chef-name"
+                    class="form-control">
+          </div>
+          <div class="form-group">
+            <label for="email">Køkkenchefens mail</label>
+            <input  formControlName="email"
+                    placeholder="Mail" id="email"
+                    class="form-control">
+          </div>
+          <button ion-button block color="green" class="bottom-button"
+                  [disabled]="!chefForm.valid || !locationForm.valid || !productsForm.valid">
+			  {{currentLocation.sub == "true" ? "Næste" : "Udfør"}}
+          </button>
+        </form>
+      </ion-row>
+
+	  <ion-row padding *ngIf="currentStep === 4 && currentLocation.sub == 'true'">
+        <form [formGroup]="locationForm" (ngSubmit)="submitForm()">
+			<div class="form-group">
+				<div class="form-group" *ngFor="let sub of subLocationList; let i = index">
+				  <label for="chef-name">Afhentning {{i + 1}}</label>
+				  <div class="input-and-delete">
+					  <input placeholder="Navn" id="id{{i}}" (input)="updateLocation(i)" class="form-control location" value={{subLocationList[i].location}}>
+				    <img src="assets/img/skraldespand_small.png" (tap)="deleteSub(i)"/>
+				  </div>
+				</div>
+				<button ion-button block class="add-sub" (tap)="addSub()" type="button">
+					test
+				</button>
+				
+				<button ion-button block color="green" class="bottom-button"
+                  [disabled]="!chefForm.valid || !locationForm.valid || !productsForm.valid">
+            	Udfør
+          		</button>
+			</div>
+		</form>
+	  </ion-row>
+
+    </div>
+</ion-content>

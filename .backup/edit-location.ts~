@@ -1,0 +1,125 @@
+import { Component } from '@angular/core';
+import { Events, IonicPage, NavController, NavParams, ViewController, AlertController} from 'ionic-angular';
+import { FormBuilder, Validators } from '@angular/forms';
+import {LocationsProvider} from "../../providers/locations/locations";
+import {BasePage} from "../BasePage";
+import {AuthProvider} from "../../providers/auth/auth";
+
+@IonicPage({
+  segment: 'location/:id/edit'
+})
+@Component({
+  selector: 'page-create-location',
+  templateUrl: '../create/location.html',
+})
+export class EditLocationPage extends BasePage {
+  title = "Rediger lokation";
+  currentStep = 1;
+  isEdit = true;
+  currentLocation:any = {};
+  chef = {chefName: "", email: ""};
+  originalChefEmail = "";
+	//subLocationList = this.subLocationList
+
+  public locationForm = this.formBuilder.group({
+    name: ["", Validators.required],
+    address: ["", Validators.required],
+    zip: ["", Validators.required],
+    city: ["", Validators.required],
+    minProducts: [1, Validators.required],
+    hasDaily: [true, Validators.required],
+    chefName: ["", Validators.required],
+    chefMail: ["", Validators.email],
+	sub: [true, Validators.required],
+  });
+  
+  public sub = this.formBuilder.group({
+  });
+
+  constructor(public navCtrl: NavController, public navParams: NavParams,
+              public locations: LocationsProvider, public events: Events,
+              public viewCtrl: ViewController, public formBuilder: FormBuilder,
+              public auth: AuthProvider, public alertCtrl: AlertController) {
+    super();
+    locations.show(navParams.get('id')).then((res:any) => {
+      this.currentLocation = res;
+      if(this.currentLocation.hasDaily == null) this.currentLocation.hasDaily = true;
+      this.currentLocation.hasDaily = this.currentLocation.hasDaily.toString();
+	  this.currentLocation.sub = this.currentLocation.sub.toString();
+	  //this.locationForm.value.subList = this.currentLocation.subList
+      auth.getUserInfo(this.currentLocation['chef']).then((res:any) => {
+        this.chef = res;
+        this.originalChefEmail = this.chef.email;
+      });
+    });
+  }
+
+  deleteLocation() {
+    this.showDialog("Slet", "Er du sikker på du vil slette lokationen?", () => {
+      this.locations.delete(this.currentLocation["_id"])
+        .then(res => {
+          this.showMessage("Succes!", "Lokationen er blevet slettet", () => {
+            this.goToPage("HomePage");
+          });
+        }, err => {
+          this.showError(err);
+          this.showMessage("Fejl", "Lokationen kunne ikke slettes, prøv igen");
+        });
+    });
+  }
+
+  submitForm() {
+    let success = 0;
+    //Opdater lokationen
+	this.locationForm.value.subList = this.currentLocation.subList
+    this.locations.updateLocation(this.navParams.get('id'), this.locationForm.value).then(res => {
+      cb()
+    }, err => {
+      this.showError(err);
+      cb(true);
+    });
+
+
+    //Opdater køkkenchefen
+    let updateObj = {
+      "chefName": this.locationForm.value.chefName,
+      "email": this.locationForm.value.chefMail
+    };
+    this.auth.updateChef(this.currentLocation['chef'], updateObj).then(res => {
+      cb()
+    }, err => {
+      this.showError(err);
+      cb(true)
+    });
+
+
+    const cb = (err = null) => {
+      if(!err) success++;
+      else success --;
+      if (success == 2) {
+        this.showMessage("Succes!", "Lokationen er blevet opdateret");
+      }
+      else if(success >= -1 && err) {
+        this.showMessage("Fejl", "Lokationen kunne ikke opdateres, prøv igen");
+      }
+    };
+
+  }
+  addSub() {
+	  console.log(this.currentLocation.subList);
+	  if (typeof this.currentLocation.subList == 'undefined') {
+		this.currentLocation.subList = [{location: ""}];
+	  } else {
+	    this.currentLocation.subList.push({location: ""});
+	  }
+  }
+  updateLocation(index) {
+	  this.currentLocation.subList[index].location = ((document.getElementById("id" + index) as HTMLInputElement).value);
+  }
+  deleteSub(index) {
+	  this.currentLocation.subList.splice(index, 1);
+  }
+  goBack() {
+	  this.navCtrl.pop();
+  }
+}
