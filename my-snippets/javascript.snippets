@@ -1,6 +1,5 @@
-snippet log "console.log" b
-console.log($1);
-$0
+snippet log "console.log" bA
+console.log($1);$0
 endsnippet
 
 snippet req "require module" b
@@ -8,8 +7,8 @@ const ${2:${1}} = require("$1");
 $0
 endsnippet
 
-snippet fun "function"
-function($1) {
+snippet fun "function" bA
+function $1 ($2) {
 	${0:${VISUAL}}
 }
 endsnippet
@@ -36,4 +35,10 @@ endsnippet
 
 snippet {; "Description" i
 {$1};
+endsnippet
+
+snippet for "for loop" bA
+for (i = 0; i < $1; i++) {
+	$2
+}$0
 endsnippet
