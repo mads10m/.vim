@@ -1,5 +1,0 @@
-snippet . "class" bA
-.$1 {
-	$2
-}
-endsnippet
