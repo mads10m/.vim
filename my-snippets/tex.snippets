@@ -44,6 +44,7 @@ snippet test "Description" b
 `!p snip.rv = "test 2" `
 endsnippet
 
+<<<<<<< HEAD
 snippet eq "\begin{equation} ... \end{equation}" b
 \begin{equation} 
 $1
@@ -64,4 +65,36 @@ snippet npro "test" bA
 \begin{mdframed}
 	Problem: ${1:${VISUAL}}
 \end{mdframed}${0}
+endsnippet
+
+snippet box "Box"
+`!p snip.rv = '┌' + '─' * (len(t[1]) + 2) + '┐'`
+│ $1 │
+`!p snip.rv = '└' + '─' * (len(t[1]) + 2) + '┘'`
+$0
+endsnippet
+
+snippet jeje "Description" wb
+helo
+endsnippet
+
+snippet tt "Description" b
+${1:placeholder} - ${2:placeholder}
+`!p
+snip.rv="""
+{0}
+{1}
+{2}
+{3}
+{4}
+{5}
+""".format(
+	fn,
+	snip.fn,
+	snip.ft,
+	snip.basename,
+	t[1] + " - " + t[2],
+	snip.v
+)
+`
 endsnippet
