@@ -13,14 +13,20 @@ $2
 \end{$1}
 endsnippet
 
+snippet fig "\begin{figure} ... \end{figure}" ba
+	\begin{figure}[${1:h!}]
+	\centering
+	\includegraphics[width=${2:0.5}\textwidth]{${3}}
+	\caption{${4}}
+\end{figure}${0}
+endsnippet
+
 snippet sec "\section{}" bA
-\section{$1}
-$0
+\section{$1}$0
 endsnippet
 
 snippet ssec "\subsection{}" bA
-\subsection{$1}
-$0
+\subsection{$1}$0
 endsnippet
 
 snippet "tab(\d+)\s(\d+)" "Description" r
@@ -36,6 +42,29 @@ endsnippet
 
 snippet test "Description" b
 `!p snip.rv = "test 2" `
+endsnippet
+
+<<<<<<< HEAD
+snippet eq "\begin{equation} ... \end{equation}" b
+\begin{equation} 
+$1
+\end{equation}$0
+endsnippet
+
+snippet vec "Description" b
+\vec{${1:name}} &= \begin{bmatrix} ${2}\\\\ ${3}\\\\ ${4}\\\\ \end{bmatrix}${5: \\\\[10pt]}${0}
+endsnippet
+
+snippet dm "Math" wA
+\[
+	${1:${VISUAL}}
+\] $0
+endsnippet
+
+snippet npro "test" bA
+\begin{mdframed}
+	Problem: ${1:${VISUAL}}
+\end{mdframed}${0}
 endsnippet
 
 snippet box "Box"
