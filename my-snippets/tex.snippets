@@ -1,4 +1,3 @@
-# vim: foldmethod=marker foldlevel=-1
 global !p
 texMathZones = ['texMathZone'+x for x in ['A', 'AS', 'B', 'BS', 'C', 'CS', 'D', 'DS', 'E', 'ES', 'F', 'FS', 'G', 'GS', 'H', 'HS', 'I', 'IS', 'J', 'JS', 'K', 'KS', 'L', 'LS', 'DS', 'V', 'W', 'X', 'Y', 'Z']]
 
@@ -27,12 +26,12 @@ endsnippet
 
 snippet beg "\begin{} .. \end{}" bA
 \begin{$1}
-$2
+	${2:${VISUAL}}
 \end{$1}
 endsnippet
 
 snippet fig "\begin{figure} ... \end{figure}" ba
-	\begin{figure}[${1:H}]
+\begin{figure}[${1:H}]
 	\centering
 	\includegraphics[width=${2:0.5}\textwidth]{${3}}
 	\caption{${4}}
@@ -66,10 +65,16 @@ snippet test "Description" b
 `!p snip.rv = "test 2" `
 endsnippet
 
-snippet eq "\begin{equation} ... \end{equation}" b
-\begin{equation}
+snippet eq "\begin{equation*} ... \end{equation*}" b
+\begin{equation*}
 $1
-\end{equation}$0
+\end{equation*}$0
+endsnippet
+
+snippet ali "\begin{align*} ... \end{align*}" b
+\begin{align*}
+	$1
+\end{align*}$0
 endsnippet
 
 snippet vec "Description" b
@@ -121,4 +126,8 @@ snip.rv="""
 	snip
 )
 `
+endsnippet
+
+snippet in "$ .. $ inline math" w
+$${1:${VISUAL} }$$0
 endsnippet
