@@ -1,4 +1,22 @@
 # vim: foldmethod=marker foldlevel=-1
+global !p
+texMathZones = ['texMathZone'+x for x in ['A', 'AS', 'B', 'BS', 'C', 'CS', 'D', 'DS', 'E', 'ES', 'F', 'FS', 'G', 'GS', 'H', 'HS', 'I', 'IS', 'J', 'JS', 'K', 'KS', 'L', 'LS', 'DS', 'V', 'W', 'X', 'Y', 'Z']]
+
+texIgnoreMathZones = ['texMathText']
+
+texMathZoneIds = vim.eval('map('+str(texMathZones)+", 'hlID(v:val)')")
+texIgnoreMathZoneIds = vim.eval('map('+str(texIgnoreMathZones)+", 'hlID(v:val)')")
+
+ignore = texIgnoreMathZoneIds[0]
+
+def math():
+	synstackids = vim.eval("synstack(line('.'), col('.') - (col('.')>=2 ? 1 : 0))")
+	try:
+		first = next(i for i in reversed(synstackids) if i in texIgnoreMathZoneIds or i in texMathZoneIds)
+		return first != ignore
+	except StopIteration:
+		return False
+endglobal
 
 snippet article "New article" bA
 \documentclass[12pt]{article}
@@ -14,7 +32,7 @@ $2
 endsnippet
 
 snippet fig "\begin{figure} ... \end{figure}" ba
-	\begin{figure}[${1:h!}]
+	\begin{figure}[${1:H}]
 	\centering
 	\includegraphics[width=${2:0.5}\textwidth]{${3}}
 	\caption{${4}}
@@ -22,11 +40,15 @@ snippet fig "\begin{figure} ... \end{figure}" ba
 endsnippet
 
 snippet sec "\section{}" bA
-\section{$1}$0
+\section{$1} % {{{
+$0
+% }}}
 endsnippet
 
 snippet ssec "\subsection{}" bA
-\subsection{$1}$0
+\subsection{$1} % {{{
+$0
+% }}}
 endsnippet
 
 snippet "tab(\d+)\s(\d+)" "Description" r
@@ -44,9 +66,8 @@ snippet test "Description" b
 `!p snip.rv = "test 2" `
 endsnippet
 
-<<<<<<< HEAD
 snippet eq "\begin{equation} ... \end{equation}" b
-\begin{equation} 
+\begin{equation}
 $1
 \end{equation}$0
 endsnippet
@@ -74,7 +95,8 @@ snippet box "Box"
 $0
 endsnippet
 
-snippet jeje "Description" wb
+context "math()"
+snippet jeje "Description" A
 helo
 endsnippet
 
@@ -88,13 +110,15 @@ snip.rv="""
 {3}
 {4}
 {5}
+{6}
 """.format(
 	fn,
 	snip.fn,
 	snip.ft,
 	snip.basename,
 	t[1] + " - " + t[2],
-	snip.v
+	snip.v,
+	snip
 )
 `
 endsnippet
