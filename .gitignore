@@ -1,4 +1,5 @@
-plugged
+plugged/
+autoload/
 .backup/
 .netrwhist
 .swp/
