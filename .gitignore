@@ -4,3 +4,4 @@ autoload/
 .netrwhist
 .swp/
 .undo/
+*.log
