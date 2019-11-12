@@ -66,26 +66,8 @@ snippet test "Description" b
 `!p snip.rv = "test 2" `
 endsnippet
 
-snippet eq "\begin{equation*} ... \end{equation*}" b
-\begin{equation*}
-$1
-\end{equation*}$0
-endsnippet
-
-snippet ali "\begin{align*} ... \end{align*}" b
-\begin{align*}
-	$1
-\end{align*}$0
-endsnippet
-
 snippet vec "Description" b
 \vec{${1:name}} &= \begin{bmatrix} ${2}\\\\ ${3}\\\\ ${4}\\\\ \end{bmatrix}${5: \\\\[10pt]}${0}
-endsnippet
-
-snippet dm "Math" wA
-\[
-	${1:${VISUAL}}
-\] $0
 endsnippet
 
 snippet npro "test" bA
@@ -129,11 +111,33 @@ snip.rv="""
 `
 endsnippet
 
-snippet in "$ .. $ inline math" w
+# Math {{{
+
+# Math mode {{{
+
+snippet in "$ .. $" w
 $${1:${VISUAL} }$$0
 endsnippet
 
-# Math {{{
+snippet ml "\[ .. \]" w
+\[
+	${1:${VISUAL}}
+\]$0
+endsnippet
+
+snippet eq "\begin{equation*} ... \end{equation*}" b
+\begin{equation*}
+$1
+\end{equation*}$0
+endsnippet
+
+snippet ali "\begin{align*} ... \end{align*}" b
+\begin{align*}
+	$1
+\end{align*}$0
+endsnippet
+
+# }}}
 
 # Fractions {{{
 context "math()"
@@ -176,3 +180,4 @@ snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
 endsnippet
 # }}}
 # }}}
+
