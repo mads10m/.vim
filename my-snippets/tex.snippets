@@ -1,4 +1,6 @@
 # vim: foldmethod=marker foldlevel=-1 nolist
+
+# Global scripts {{{
 global !p
 texMathZones = ['texMathZone'+x for x in ['A', 'AS', 'B', 'BS', 'C', 'CS', 'D', 'DS', 'E', 'ES', 'F', 'FS', 'G', 'GS', 'H', 'HS', 'I', 'IS', 'J', 'JS', 'K', 'KS', 'L', 'LS', 'DS', 'V', 'W', 'X', 'Y', 'Z']]
 
@@ -18,6 +20,140 @@ def math():
 		return False
 endglobal
 
+# }}}
+
+# Sections {{{
+snippet sec "\section{}" bA
+\section{$1}% {{{
+$0
+% }}}
+endsnippet
+
+snippet ssec "\subsection{}" bA
+\subsection{$1}% {{{
+$0
+% }}}
+endsnippet
+
+snippet sssec "\subsection{}" bA
+\subsubsection{$1}% {{{
+$0
+% }}}
+endsnippet
+
+snippet chao "\chapter{}" bA
+\chapter{$1}% {{{
+$0
+% }}}
+endsnippet
+# }}}
+
+# Lists {{{
+
+snippet item "\begin{itemize} ... \end{itemize}" bA
+\begin{itemize}
+	\item $0
+\end{itemize}
+endsnippet
+
+snippet enum "\begin{enumerate} ... \end{enumerate}" bA
+\begin{enumerate}
+	\item $0
+\end{enumerate}
+endsnippet
+
+snippet desc "\begin{description} ... \end{description}" bA
+\begin{descriptionc}
+	\item[$1] $0
+\end{description}
+endsnippet
+
+# }}}
+
+# Math {{{
+
+# Math mode {{{
+
+snippet in "$ .. $" wA
+$${1:${VISUAL}}$`!p
+if t[2] and t[2][0] not in ['?', ' ']:
+	snip.rv = ' '
+else:
+	snip.rv = ''
+`$2
+endsnippet
+
+snippet ml "\[ .. \]" w
+\[
+	${1:${VISUAL}}
+\]$0
+endsnippet
+
+snippet eq "\begin{equation*} ... \end{equation*}" b
+\begin{equation*}
+$1
+\end{equation*}$0
+endsnippet
+
+snippet ali "\begin{align*} ... \end{align*}" b
+\begin{align*}
+	${1:${VISUAL}}
+\end{align*}$0
+endsnippet
+
+# }}}
+
+# Operators {{{
+
+context "math()"
+snippet ** "\cdot" wA
+\cdot
+endsnippet
+
+# }}}
+
+# Fractions {{{
+context "math()"
+snippet // "\frac{...}{...}" iA
+\\frac{$1}{$2}$0
+endsnippet
+
+context "math()"
+snippet '^.*\)/' "\frac{...}{...}" wrA
+`!p
+stripped = match.string[:-1]
+depth = 0
+i = len(stripped) - 1
+while True:
+	if stripped[i] == ')': depth += 1
+	if stripped[i] == '(': depth -= 1
+	if depth == 0: break;
+	i-=1
+snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
+`{$1}$0
+endsnippet
+# }}}
+
+# Superscript {{{
+context "math()"
+snippet ^ "Description" iA
+^{$1}$0
+endsnippet
+# }}}
+
+# Subscript {{{
+context "math()"
+snippet '([A-Za-z])(\d)' "auto subscript" wrA
+`!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
+endsnippet
+
+context "math()"
+snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
+`!p snip.rv = match.group(1)`_{`!p snip.rv = match.group(2)`}
+endsnippet
+# }}}
+# }}}
+
 snippet article "New article" bA
 \documentclass[12pt]{article}
 \begin{document}
@@ -31,25 +167,22 @@ snippet beg "\begin{} .. \end{}" bA
 \end{$1}
 endsnippet
 
-snippet fig "\begin{figure} ... \end{figure}" ba
-\begin{figure}[${1:H}]
+snippet fig "Figure environment" b
+\begin{figure}[${1:htpb}]
 	\centering
-	\includegraphics[width=${2:0.5}\textwidth]{${3}}
-	\caption{${4}}
-\end{figure}${0}
+	${2:\includegraphics[width=0.8\textwidth]{$3}}
+	\caption{${4:$3}}
+	\label{fig:${5:${3/\W+/-/g}}}
+\end{figure}
 endsnippet
 
-snippet sec "\section{}" bA
-\section{$1} % {{{
-$0
-% }}}
-endsnippet
-
-snippet ssec "\subsection{}" bA
-\subsection{$1} % {{{
-$0
-% }}}
-endsnippet
+#snippet fig "\begin{figure} ... \end{figure}" bA
+#\begin{figure}[${1:H}]
+#	\centering
+#	\includegraphics[width=${2:0.5}\textwidth]{${3}}
+#	\caption{${4}}
+#\end{figure}${0}
+#endsnippet
 
 snippet "tab(\d+)\s(\d+)" "Description" r
 `!p
@@ -111,73 +244,8 @@ snip.rv="""
 `
 endsnippet
 
-# Math {{{
-
-# Math mode {{{
-
-snippet in "$ .. $" w
-$${1:${VISUAL} }$$0
+snippet tab "tabular / array environment" b
+\begin{${1:t}${1/(t)$|(a)$|(.*)/(?1:abular)(?2:rray)/}}{${2:c}}
+$0${2/(?<=.)(c|l|r)|./(?1: & )/g}
+\end{$1${1/(t)$|(a)$|(.*)/(?1:abular)(?2:rray)/}}
 endsnippet
-
-snippet ml "\[ .. \]" w
-\[
-	${1:${VISUAL}}
-\]$0
-endsnippet
-
-snippet eq "\begin{equation*} ... \end{equation*}" b
-\begin{equation*}
-$1
-\end{equation*}$0
-endsnippet
-
-snippet ali "\begin{align*} ... \end{align*}" b
-\begin{align*}
-	$1
-\end{align*}$0
-endsnippet
-
-# }}}
-
-# Fractions {{{
-context "math()"
-snippet // "\frac{...}{...}" iA
-\\frac{$1}{$2}$0
-endsnippet
-
-context "math()"
-snippet '^.*\)/' "\frac{...}{...}" wrA
-`!p
-stripped = match.string[:-1]
-depth = 0
-i = len(stripped) - 1
-while True:
-	if stripped[i] == ')': depth += 1
-	if stripped[i] == '(': depth -= 1
-	if depth == 0: break;
-	i-=1
-snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
-`{$1}$0
-endsnippet
-# }}}
-
-# Superscript {{{
-context "math()"
-snippet ^ "Description" iA
-^{$1}$0
-endsnippet
-# }}}
-
-# Subscript {{{
-#context "math()"
-#snippet '([A-Za-z])(\d)' "auto subscript" wrA
-#`!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
-#endsnippet
-
-context "math()"
-snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
-`!p snip.rv = match.group(1)`_{`!p snip.rv = match.group(2)`}
-endsnippet
-# }}}
-# }}}
-
