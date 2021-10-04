@@ -1,10 +1,49 @@
-snippet t "tag" b
-<${1:div}>
-	$2
-</$1>
-$0
+snippet div "<div>" b
+<div>
+	${0:${VISUAL}}
+</div>
 endsnippet
 
-snippet h1 "<h1> ... </h1>" bA
-<h1>$1</h1>
+snippet div# "<div> with ID & class" w
+<div`!p snip.rv=' id="' if t[1] else ""`${1:name}`!p snip.rv = '"' if t[1] else ""``!p snip.rv=' class="' if t[2] else ""`${2:name}`!p snip.rv = '"' if t[2] else ""`>
+	${0:${VISUAL}}
+</div>
+endsnippet
+
+snippet div. "<div> with class" w
+<div`!p snip.rv=' class="' if t[1] else ""`${1:name}`!p snip.rv = '"' if t[1] else ""`>
+	${0:${VISUAL}}
+</div>
+endsnippet
+
+snippet a "Link" w
+<a href="$1"$2>$3</a>
+endsnippet
+
+snippet b "<b>" w
+<b>$1</b>$0
+endsnippet
+
+snippet h1 "<h1>" w
+<h1>${0:${VISUAL}}</h1>
+endsnippet
+
+snippet h2 "<h2>" w
+<h2>${0:${VISUAL}}</h2>
+endsnippet
+
+snippet h3 "<h3>" w
+<h3>${0:${VISUAL}}</h3>
+endsnippet
+
+snippet h4 "<h4>" w
+<h4>${0:${VISUAL}}</h4>
+endsnippet
+
+snippet h5 "<h5>" w
+<h5>${0:${VISUAL}}</h5>
+endsnippet
+
+snippet h6 "<h6>" w
+<h6>${0:${VISUAL}}</h6>
 endsnippet
